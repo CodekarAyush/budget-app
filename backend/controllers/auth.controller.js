@@ -1,5 +1,6 @@
 import User from "../models/user.model.js";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 import { generateOtp } from "../utils/auth.utils.js";
 import { userOtp } from "../models/userOtp.model.js";
 import { sendEmail } from "../utils/email.js";
@@ -96,3 +97,29 @@ export const verifyProfile = async (req, res) => {
     });
 }
 };
+
+export const login = async (req, res) => {
+  try {
+    const { email, password } = req.body
+    const userExists = await User.findOne({ email })
+    if (!userExists) {
+      return res.status(403).json({ message:"User does not exist"});
+    }
+    const isPassEqual = await bcrypt.compare(password, userExists.password);
+    if (!isPassEqual) {
+      return res.status(403).json({ message: "User does not exist" });
+    }
+    const jwtToken = jwt.sign({ email: userExists.email, _id: user_id }, process.env.JWT_SECRET, { expireIn: "7d" })
+    res.status(200).json({
+      message: "Login Successfully",
+      success: true,
+      jwtToken,
+      email
+    })
+
+    
+  } catch (error) {
+    
+  }
+  
+}
