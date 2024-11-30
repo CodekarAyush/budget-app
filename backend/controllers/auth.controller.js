@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import { generateOtp } from "../utils/auth.utils.js";
 import { userOtp } from "../models/userOtp.model.js";
 import { sendEmail } from "../utils/email.js";
-
+import { genToken } from "../utils/tokens.js";
 export const register = async (req, res) => {
   try {
     const { name, email, phoneNumber, password } = req.body;
@@ -76,18 +76,16 @@ export const verifyProfile = async (req, res) => {
       });
     }
     if (otp === Otp.otp) {
-        user.isActive = true;
-        await user.save();
-        await userOtp.deleteOne({ _id: Otp._id });
-        
-       return res.status(200).json({
-          message: "Porfile is active now ! ",
-          
-        });
+      user.isActive = true;
+      await user.save();
+      await userOtp.deleteOne({ _id: Otp._id });
+
+      return res.status(200).json({
+        message: "Porfile is active now ! ",
+      });
     }
     res.status(400).json({
       message: "incorrect OTP !  ",
-
     });
   } catch (error) {
     console.log(error);
@@ -95,31 +93,42 @@ export const verifyProfile = async (req, res) => {
       message: "internal server error ",
       error: error.message,
     });
-}
+  }
 };
 
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body
-    const userExists = await User.findOne({ email })
-    if (!userExists) {
-      return res.status(403).json({ message:"User does not exist"});
+    const { emailOrPassword, password } = req.body;
+    if (!emailOrPassword || !password) {
+      return res.status(400).json({
+        message: "Email/phone number and  password is missing ",
+      });
     }
-    const isPassEqual = await bcrypt.compare(password, userExists.password);
-    if (!isPassEqual) {
-      return res.status(403).json({ message: "User does not exist" });
+    const user = await User.findOne({ $or:[{email:emailOrPassword},{phoneNumber:emailOrPassword}] });
+    if (!user) {
+      return res.status(400).json({
+        message: "Please signup first ! ",
+      });
     }
-    const jwtToken = jwt.sign({ email: userExists.email, _id: user_id }, process.env.JWT_SECRET, { expireIn: "7d" })
-    res.status(200).json({
-      message: "Login Successfully",
-      success: true,
-      jwtToken,
-      email
-    })
 
-    
+    const loggedin = await bcrypt.compare(password, user.password);
+    if (loggedin) {
+      const token = await genToken({ userId: user._id, role: user.role });
+      return res.status(200).json({ message: "Login successful!", token });
+    }
+
+    res.status(401).json({
+      message: "Incorrect password ",
+    });
   } catch (error) {
-    
+    console.log(error);
+    res.status(500).json({
+      message: "internal server error ",
+      error: error.message,
+    });
   }
+};
+
+
+
   
-}

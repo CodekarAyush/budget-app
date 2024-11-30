@@ -5,7 +5,9 @@ const router = Router();
 
 
 router.post('/register',register );
+
 router.post('/login',login );
+
 router.get('/verify-profile',verifyProfile );
 router.post('/forget-password', );
 router.post('/reset-password', );

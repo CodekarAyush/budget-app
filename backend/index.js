@@ -5,6 +5,7 @@ import  morgan from 'morgan'
 import { connectDB } from './config/db.js';
 import { cleanupExiredOtp } from './jobs/otp.job.js';
 import authRoutes from "./routes/auth.route.js"
+import { adminProtect, handleToken, userProtect } from './middleware/auth.js';
 
 const app = express();
 
@@ -25,6 +26,12 @@ cleanupExiredOtp()
 app.use("/api/auth",authRoutes)
 app.get('/', (req, res) => {
   res.send('Hello, Express!');
+});
+app.get('/admin',handleToken, adminProtect, (req, res) => {
+  res.send('Hello, Admin!');
+});
+app.get('/user',handleToken, userProtect, (req, res) => {
+  res.send('Hello, User!');
 });
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
